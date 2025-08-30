@@ -1,85 +1,61 @@
 @load base/frameworks/notice
-@load base/frameworks/sumstats
 
 module PortScan;
 
 export {
     redef enum Notice::Type += {
-        Vertical_Port_Scan,
-        Horizontal_Port_Scan
+        Port_Scan_Detected,
+        Multiple_Ports_Scanned
     };
     
-    # Thresholds for detection
-    const vertical_scan_threshold = 15 &redef;
-    const horizontal_scan_threshold = 10 &redef;
-    const scan_interval = 5min &redef;
-    
-    # Track scanning sources
-    global scanning_sources: set[addr] &create_expire=10min;
+    # Track scan attempts per source
+    global scan_attempts: table[addr] of set[port] &create_expire=5min;
+    global scan_threshold = 10 &redef;
 }
 
 event connection_attempt(c: connection)
 {
-    local is_failed = F;
-    
     # Check for failed connection attempts
     if ( c$history == "S" || c$history == "Sr" || c$conn$conn_state == "S0" )
-        is_failed = T;
-    
-    if ( is_failed )
     {
-        # Track vertical scanning (many ports, same host)
-        SumStats::observe("port_scan.vertical", 
-                         SumStats::Key($host=c$id$orig_h),
-                         SumStats::Observation($num=1));
+        local src = c$id$orig_h;
+        local dst_port = c$id$resp_p;
         
-        # Track horizontal scanning (same port, many hosts)  
-        SumStats::observe("port_scan.horizontal",
-                         SumStats::Key($str=cat(c$id$resp_p)),
-                         SumStats::Observation($num=1));
+        # Initialize tracking for new scanner
+        if ( src !in scan_attempts )
+            scan_attempts[src] = set();
         
-        add scanning_sources[c$id$orig_h];
+        # Add this port to the set of scanned ports
+        add scan_attempts[src][dst_port];
+        
+        # Check if threshold exceeded
+        if ( |scan_attempts[src]| == scan_threshold )
+        {
+            NOTICE([$note=Port_Scan_Detected,
+                    $msg=fmt("Port scan detected from %s (scanned %d ports)", src, |scan_attempts[src]|),
+                    $src=src,
+                    $identifier=cat(src)]);
+        }
+        
+        # Also generate per-attempt notices for visibility
+        if ( |scan_attempts[src]| > 1 && |scan_attempts[src]| < 5 )
+        {
+            NOTICE([$note=Multiple_Ports_Scanned,
+                    $msg=fmt("Multiple port scan attempts from %s to port %s", src, dst_port),
+                    $src=src,
+                    $conn=c]);
+        }
     }
 }
 
-event zeek_init()
+event zeek_done()
 {
-    # Vertical scan detection
-    local vertical_r1 = SumStats::Reducer($stream="port_scan.vertical",
-                                          $apply=set(SumStats::SUM));
-    
-    SumStats::create([$name="detect_vertical_scans",
-                      $epoch=scan_interval,
-                      $reducers=set(vertical_r1),
-                      $threshold=vertical_scan_threshold,
-                      $threshold_val(key: SumStats::Key, result: SumStats::Result) =
-                      {
-                          return result["port_scan.vertical"]$sum;
-                      },
-                      $threshold_crossed(key: SumStats::Key, result: SumStats::Result) =
-                      {
-                          NOTICE([$note=Vertical_Port_Scan,
-                                  $msg=fmt("Vertical port scan detected from %s", key$host),
-                                  $src=key$host,
-                                  $identifier=cat(key$host)]);
-                      }]);
-    
-    # Horizontal scan detection
-    local horizontal_r1 = SumStats::Reducer($stream="port_scan.horizontal",
-                                            $apply=set(SumStats::SUM));
-    
-    SumStats::create([$name="detect_horizontal_scans",
-                      $epoch=scan_interval,
-                      $reducers=set(horizontal_r1),
-                      $threshold=horizontal_scan_threshold,
-                      $threshold_val(key: SumStats::Key, result: SumStats::Result) =
-                      {
-                          return result["port_scan.horizontal"]$sum;
-                      },
-                      $threshold_crossed(key: SumStats::Key, result: SumStats::Result) =
-                      {
-                          NOTICE([$note=Horizontal_Port_Scan,
-                                  $msg=fmt("Horizontal scan detected on port %s", key$str),
-                                  $identifier=key$str]);
-                      }]);
+    # Final summary of scanning sources
+    for ( src in scan_attempts )
+    {
+        if ( |scan_attempts[src]| >= scan_threshold )
+        {
+            print fmt("Scanner %s attempted %d different ports", src, |scan_attempts[src]|);
+        }
+    }
 }
