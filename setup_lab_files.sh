@@ -5,10 +5,8 @@
 mkdir -p /home/ubuntu/zeek_analysis/extract_files
 cd /home/ubuntu/zeek_analysis/extract_files
 
-# Create example extracted files
-echo "MZ" | xxd -r -p > extract-1756652095.126649
-echo "4D5A90000300000004000000FFFF0000" | xxd -r -p > extract-1756652095.127660
-echo "504B0304" | xxd -r -p > extract-1756652095.128701
+# Create the actual extracted file that matches what Zeek generates
+echo "MZ" | xxd -r -p > extract-1756653817.607456-HTTP-FsiSqI1WLLlY9GyLV5
 
 cd /home/ubuntu/zeek_analysis
 
@@ -22,11 +20,7 @@ cat > files.log << 'FILESLOG'
 #open	2025-08-31-14-00-00
 #fields	ts	fuid	tx_hosts	rx_hosts	conn_uids	source	depth	analyzers	mime_type	filename	duration	local_orig	is_orig	seen_bytes	total_bytes	missing_bytes	overflow_bytes	timedout	parent_fuid	md5	sha1	sha256	extracted	extracted_cutoff	extracted_size
 #types	time	string	set[addr]	set[addr]	set[string]	string	count	set[string]	string	string	interval	bool	bool	count	count	count	count	bool	string	string	string	string	string	bool	count
-1756652095.126649	FhETkS3I7LsLH4QQBf	185.220.101.50	192.168.1.75	CuKFds3dfSNJC2k5Xa	HTTP	0	MD5,SHA256,EXTRACT	application/x-dosexec	malware.exe	0.100000	F	F	10240	10240	0	0	F	-	5d41402abc4b2a76b9719d911017c592	aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d	2c26b46b68ffc68ff99b453c1d30413413422e706483bfa0f98a5e886266e7ae	extract-1756652095.126649	F	10240
-1756652095.127660	FZW8tX2J8SJH3RTWBa	185.220.101.50	192.168.1.75	CHhAvx4DvqnfSZCTwa	HTTP	0	MD5,SHA256,EXTRACT	application/x-msdownload	payload.exe	0.050000	F	F	5120	5120	0	0	F	-	098f6bcd4621d373cade4e832627b4f6	a94a8fe5ccb19ba61c4c0873d391e987982fbbd3	9b871905b147d7c3ff862f13e3f5e8ff266e2e6203cf6c16e6e2e0c53c8f1b0d	extract-1756652095.127660	F	5120
-1756652095.128701	FGKRvS1hSZK7NXSkCg	192.168.1.101	192.168.1.80	Cqr9GS2VopNHQNW1gc	HTTP	0	MD5,SHA256	application/x-zip	data.zip	0.200000	T	T	102400	102400	0	0	F	-	c4ca4238a0b923820dcc509a6f75849b	356a192b7913b04c54574d18c28d46e6395428ab	6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b	extract-1756652095.128701	F	102400
-1756652095.131010	FWeTHx4QnSPVGR6M3d	203.0.113.50	192.168.1.20	CXTblg2Z5J8nCKSwA6	SSH	0	-	-	-	0.000000	F	F	0	-	0	0	F	-	-	-	-	-	F	-
-1756652095.131507	FlKqYh3DHgGNCSwyB7	198.51.100.15	192.168.1.80	CyNvfr3KtLwHqU7nRf	HTTP	0	-	text/html	index.html	0.010000	F	F	8192	8192	0	0	F	-	7d793037a0760186574b0282f2f435e7	da39a3ee5e6b4b0d3255bfef95601890afd80709	e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855	-	F	-
+1756652095.126649	FsiSqI1WLLlY9GyLV5	192.168.1.75	185.220.101.50	CuKFds3dfSNJC2k5Xa	HTTP	0	MD5,SHA256,EXTRACT	application/x-dosexec	-	0.100000	F	F	10240	10240	0	0	F	-	9ce3bb74469869d10b50d343edef600e	aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d	30b045a7d9e09570072999e1cdef0e00cc1add72a0db594057b19ccdba686d04	extract-1756653817.607456-HTTP-FsiSqI1WLLlY9GyLV5	F	10240
 #close	2025-08-31-14-00-00
 FILESLOG
 
