@@ -25,7 +25,7 @@ export {
     global beacon_patterns: table[addr] of vector of time &create_expire=30min;
 }
 
-# SSH Brute Force Detection
+# SSH Brute Force Detection - using actual Zeek SSH events
 event ssh_auth_failed(c: connection)
 {
     local src = c$id$orig_h;
@@ -46,7 +46,8 @@ event ssh_auth_failed(c: connection)
     }
 }
 
-event ssh_auth_successful(c: connection)
+# Track successful SSH after failures
+event ssh_auth_successful(c: connection, auth_method_none: bool)
 {
     local src = c$id$orig_h;
     
@@ -78,7 +79,6 @@ event connection_established(c: connection)
     # Check for regular intervals
     if ( |beacon_patterns[src]| >= c2_beacon_count )
     {
-        local intervals: vector of interval = vector();
         local regular_beacon = T;
         local prev_time = beacon_patterns[src][0];
         
@@ -87,18 +87,9 @@ event connection_established(c: connection)
             if ( i > 0 )
             {
                 local time_diff = beacon_patterns[src][i] - prev_time;
-                intervals += time_diff;
-                
-                # Check if intervals are regular (within 10% variance)
-                if ( |intervals| > 1 )
-                {
-                    local last_interval = intervals[|intervals|-1];
-                    local prev_interval = intervals[|intervals|-2];
-                    local variance = double_to_count((last_interval - prev_interval) / prev_interval * 100);
-                    
-                    if ( variance > 10 )
-                        regular_beacon = F;
-                }
+                # Simple check - if intervals vary by more than 30 seconds, not regular
+                if ( time_diff > 90sec || time_diff < 30sec )
+                    regular_beacon = F;
                 
                 prev_time = beacon_patterns[src][i];
             }
@@ -137,7 +128,7 @@ event connection_state_remove(c: connection)
     }
     
     # Data Exfiltration Detection
-    if ( c$orig$num_bytes_ip > exfil_threshold )
+    if ( c$orig?$num_bytes_ip && c$orig$num_bytes_ip > exfil_threshold )
     {
         NOTICE([$note=Data_Exfiltration_Suspected,
                 $msg=fmt("Large data transfer detected: %d bytes from %s to %s",
@@ -151,12 +142,16 @@ event connection_state_remove(c: connection)
     }
 }
 
-# Track scan followed by exploitation
-event PortScan::Vertical_Port_Scan(src: addr)
+# Track scan activity from detect_scans script
+event Notice::log_notice(n: Notice::Info)
 {
-    if ( src !in attack_stages )
-        attack_stages[src] = set();
-    add attack_stages[src]["port_scan"];
+    # Check if this is a port scan notice
+    if ( n$note == PortScan::Vertical_Port_Scan && n?$src )
+    {
+        if ( n$src !in attack_stages )
+            attack_stages[n$src] = set();
+        add attack_stages[n$src]["port_scan"];
+    }
 }
 
 event http_request(c: connection, method: string, original_URI: string,
@@ -184,6 +179,6 @@ event http_request(c: connection, method: string, original_URI: string,
 
 event zeek_init()
 {
-    # Initialize correlation tracking
+    # Initialization message
     print "Correlation rules loaded - tracking multi-stage attacks";
 }
