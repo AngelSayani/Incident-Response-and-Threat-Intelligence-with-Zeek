@@ -25,11 +25,18 @@ export {
 event http_header(c: connection, is_orig: bool, name: string, value: string)
 {
     # Check for HTTP on HTTPS port
-    if ( c$id$resp_p in standard_https_ports && c?$service && c$service[0] == "http" )
+    if ( c$id$resp_p in standard_https_ports && c?$service )
     {
-        NOTICE([$note=Protocol_Mismatch,
-                $msg=fmt("Plain HTTP on HTTPS port %s", c$id$resp_p),
-                $conn=c]);
+        for ( s in c$service )
+        {
+            if ( s == "http" )
+            {
+                NOTICE([$note=Protocol_Mismatch,
+                        $msg=fmt("Plain HTTP on HTTPS port %s", c$id$resp_p),
+                        $conn=c]);
+                break;
+            }
+        }
     }
 }
 
@@ -92,18 +99,21 @@ event connection_state_remove(c: connection)
     # Check for services on non-standard ports
     if ( c?$service )
     {
-        if ( "ssh" in c$service && c$id$resp_p !in standard_ssh_ports )
+        for ( s in c$service )
         {
-            NOTICE([$note=Non_Standard_Port_Usage,
-                    $msg=fmt("SSH service on non-standard port %s", c$id$resp_p),
-                    $conn=c]);
-        }
-        
-        if ( "http" in c$service && c$id$resp_p !in standard_http_ports )
-        {
-            NOTICE([$note=Non_Standard_Port_Usage,
-                    $msg=fmt("HTTP service on non-standard port %s", c$id$resp_p),
-                    $conn=c]);
+            if ( s == "ssh" && c$id$resp_p !in standard_ssh_ports )
+            {
+                NOTICE([$note=Non_Standard_Port_Usage,
+                        $msg=fmt("SSH service on non-standard port %s", c$id$resp_p),
+                        $conn=c]);
+            }
+            
+            if ( s == "http" && c$id$resp_p !in standard_http_ports )
+            {
+                NOTICE([$note=Non_Standard_Port_Usage,
+                        $msg=fmt("HTTP service on non-standard port %s", c$id$resp_p),
+                        $conn=c]);
+            }
         }
     }
 }
