@@ -73,19 +73,30 @@ def generate_suspicious_traffic():
     
     for payload in sqli_payloads:
         sport = random.randint(50000, 60000)
+        
+        # Three-way handshake first
+        syn = IP(src=attacker_ip, dst=web_server)/TCP(sport=sport, dport=80, flags="S", seq=1000)
+        syn_ack = IP(src=web_server, dst=attacker_ip)/TCP(sport=80, dport=sport, flags="SA", seq=2000, ack=1001)
+        ack = IP(src=attacker_ip, dst=web_server)/TCP(sport=sport, dport=80, flags="A", seq=1001, ack=2001)
+        packets.extend([syn, syn_ack, ack])
+        
         # HTTP request with SQL injection
         http_req = (
             IP(src=attacker_ip, dst=web_server)/
-            TCP(sport=sport, dport=80, flags="PA")/
-            Raw(load=f"GET {payload} HTTP/1.1\r\nHost: vulnerable.site\r\n\r\n")
+            TCP(sport=sport, dport=80, flags="PA", seq=1001, ack=2001)/
+            Raw(load=f"GET {payload} HTTP/1.1\r\nHost: vulnerable.site\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r\n")
         )
         packets.append(http_req)
+        
+        # Server ACK
+        srv_ack = IP(src=web_server, dst=attacker_ip)/TCP(sport=80, dport=sport, flags="A", seq=2001, ack=1001+len(http_req[Raw].load))
+        packets.append(srv_ack)
         
         # Server response
         http_resp = (
             IP(src=web_server, dst=attacker_ip)/
-            TCP(sport=80, dport=sport, flags="PA")/
-            Raw(load="HTTP/1.1 500 Internal Server Error\r\n\r\n")
+            TCP(sport=80, dport=sport, flags="PA", seq=2001, ack=1001+len(http_req[Raw].load))/
+            Raw(load="HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
         )
         packets.append(http_resp)
     
