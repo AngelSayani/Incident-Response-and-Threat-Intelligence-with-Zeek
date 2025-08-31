@@ -4,13 +4,16 @@ module PortScan;
 
 export {
     redef enum Notice::Type += {
-        Port_Scan_Detected,
-        Multiple_Ports_Scanned
+        Vertical_Port_Scan,
+        Horizontal_Port_Scan
     };
     
-    # Track scan attempts per source
-    global scan_attempts: table[addr] of set[port] &create_expire=5min;
-    global scan_threshold = 10 &redef;
+    # Track scan attempts
+    global vertical_scans: table[addr] of set[port] &create_expire=5min;
+    global horizontal_scans: table[port] of set[addr] &create_expire=5min;
+    
+    const vertical_threshold = 10 &redef;
+    const horizontal_threshold = 5 &redef;
 }
 
 event connection_attempt(c: connection)
@@ -19,43 +22,61 @@ event connection_attempt(c: connection)
     if ( c$history == "S" || c$history == "Sr" || c$conn$conn_state == "S0" )
     {
         local src = c$id$orig_h;
+        local dst = c$id$resp_h;
         local dst_port = c$id$resp_p;
         
-        # Initialize tracking for new scanner
-        if ( src !in scan_attempts )
-            scan_attempts[src] = set();
+        # Track vertical scanning (one source, many ports)
+        if ( src !in vertical_scans )
+            vertical_scans[src] = set();
+        add vertical_scans[src][dst_port];
         
-        # Add this port to the set of scanned ports
-        add scan_attempts[src][dst_port];
-        
-        # Check if threshold exceeded
-        if ( |scan_attempts[src]| == scan_threshold )
+        # Check for vertical scan threshold
+        if ( |vertical_scans[src]| == vertical_threshold )
         {
-            NOTICE([$note=Port_Scan_Detected,
-                    $msg=fmt("Port scan detected from %s (scanned %d ports)", src, |scan_attempts[src]|),
+            NOTICE([$note=Vertical_Port_Scan,
+                    $msg=fmt("Vertical port scan detected from %s (scanned %d different ports)", 
+                            src, |vertical_scans[src]|),
                     $src=src,
-                    $identifier=cat(src)]);
+                    $identifier=cat(src, "_vertical")]);
         }
         
-        # Also generate per-attempt notices for visibility
-        if ( |scan_attempts[src]| > 1 && |scan_attempts[src]| < 5 )
+        # Track horizontal scanning (one port, many hosts)
+        if ( dst_port !in horizontal_scans )
+            horizontal_scans[dst_port] = set();
+        add horizontal_scans[dst_port][dst];
+        
+        # Check for horizontal scan threshold
+        if ( |horizontal_scans[dst_port]| == horizontal_threshold )
         {
-            NOTICE([$note=Multiple_Ports_Scanned,
-                    $msg=fmt("Multiple port scan attempts from %s to port %s", src, dst_port),
-                    $src=src,
-                    $conn=c]);
+            NOTICE([$note=Horizontal_Port_Scan,
+                    $msg=fmt("Horizontal scan detected on port %s (targeted %d different hosts)", 
+                            dst_port, |horizontal_scans[dst_port]|),
+                    $identifier=cat(dst_port, "_horizontal")]);
         }
     }
 }
 
-event zeek_done()
+# Also handle regular connection events for better detection
+event connection_state_remove(c: connection)
 {
-    # Final summary of scanning sources
-    for ( src in scan_attempts )
+    # Additional check for completed but rejected connections
+    if ( c$conn$conn_state == "REJ" || c$conn$conn_state == "RSTO" )
     {
-        if ( |scan_attempts[src]| >= scan_threshold )
+        local src = c$id$orig_h;
+        local dst_port = c$id$resp_p;
+        
+        if ( src !in vertical_scans )
+            vertical_scans[src] = set();
+        add vertical_scans[src][dst_port];
+        
+        # Lower threshold for REJ connections as they're more suspicious
+        if ( |vertical_scans[src]| >= 5 && |vertical_scans[src]| < vertical_threshold )
         {
-            print fmt("Scanner %s attempted %d different ports", src, |scan_attempts[src]|);
+            NOTICE([$note=Vertical_Port_Scan,
+                    $msg=fmt("Likely vertical port scan from %s (multiple rejected connections)", src),
+                    $src=src,
+                    $conn=c,
+                    $identifier=cat(src, "_vertical_rej")]);
         }
     }
 }
