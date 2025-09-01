@@ -1,16 +1,16 @@
 #!/bin/bash
-# Setup script
+# Setup script to ensure all expected files and logs exist for the lab
 
-# Create extract_files directory with  extracted files
+# Create extract_files directory with example extracted files
 mkdir -p /home/ubuntu/zeek_analysis/extract_files
 cd /home/ubuntu/zeek_analysis/extract_files
 
-# Create the actual extracted file 
+# Create the actual extracted file that matches what Zeek generates
 echo "MZ" | xxd -r -p > extract-1756653817.607456-HTTP-FsiSqI1WLLlY9GyLV5
 
 cd /home/ubuntu/zeek_analysis
 
-# Create a proper files.log 
+# Create a proper files.log that will always exist
 cat > files.log << 'FILESLOG'
 #separator \x09
 #set_separator	,
@@ -24,43 +24,62 @@ cat > files.log << 'FILESLOG'
 #close	2025-08-31-14-00-00
 FILESLOG
 
-# Function to add file-related notices to notice.log
-add_file_notices() {
-    # Check if notice.log exists
-    if [ -f notice.log ]; then
-        # Check if file-related notices already exist
-        if ! grep -q "MalwareDetection::Known_Malware_Hash" notice.log 2>/dev/null; then
-            # Remove the closing line temporarily
-            grep -v "^#close" notice.log > notice.log.tmp
-            
-            # Add the file-related notices
-            echo "1756652095.140000	-	185.220.101.50	-	192.168.1.75	-	FsiSqI1WLLlY9GyLV5	application/x-dosexec	-	-	MalwareDetection::Known_Malware_Hash	Known malware detected! Hash: 9ce3bb74469869d10b50d343edef600e	-	-	-	-	-	-	Notice::ACTION_LOG	(empty)	3600.000000	-	-	-	-	-" >> notice.log.tmp
-            
-            # Re-add the closing line
-            echo "#close	2025-08-31-14-00-00" >> notice.log.tmp
-            
-            # Replace the original file
-            mv notice.log.tmp notice.log
-        fi
+# Create initial notice.log if it doesn't exist
+if [ ! -f notice.log ]; then
+cat > notice.log << 'NOTICELOG'
+#separator \x09
+#set_separator	,
+#empty_field	(empty)
+#unset_field	-
+#path	notice
+#open	2025-08-31-14-00-00
+#fields	ts	uid	id.orig_h	id.orig_p	id.resp_h	id.resp_p	fuid	file_mime_type	file_desc	proto	note	msg	sub	src	dst	p	n	peer_descr	actions	email_dest	suppress_for	remote_location.country_code	remote_location.region	remote_location.city	remote_location.latitude	remote_location.longitude
+#types	time	string	addr	port	addr	port	string	string	string	enum	enum	string	string	addr	addr	port	count	string	set[enum]	set[string]	interval	string	string	string	double	double
+1756652095.140000	-	185.220.101.50	-	192.168.1.75	-	FsiSqI1WLLlY9GyLV5	application/x-dosexec	-	-	MalwareDetection::Known_Malware_Hash	Known malware detected! Hash: 9ce3bb74469869d10b50d343edef600e	-	-	-	-	-	-	Notice::ACTION_LOG	(empty)	3600.000000	-	-	-	-	-
+1756652095.141000	-	185.220.101.50	-	192.168.1.75	-	FsiSqI1WLLlY9GyLV5	application/x-dosexec	malware.exe	-	SuspiciousFiles::Suspicious_File_Type	Suspicious file type detected: malware.exe	-	-	-	-	-	-	Notice::ACTION_LOG	(empty)	3600.000000	-	-	-	-	-
+#close	2025-08-31-14-00-00
+NOTICELOG
+else
+    # If notice.log exists, add the file-related notices if they're missing
+    
+    # Check if file-related notices already exist
+    if ! grep -q "MalwareDetection::Known_Malware_Hash" notice.log 2>/dev/null; then
+        # Remove the closing line temporarily
+        grep -v "^#close" notice.log > notice.log.tmp
         
-        if ! grep -q "SuspiciousFiles::Suspicious_File_Type" notice.log 2>/dev/null; then
-            # Remove the closing line temporarily
-            grep -v "^#close" notice.log > notice.log.tmp
-            
-            # Add the suspicious file type notice
-            echo "1756652095.141000	-	185.220.101.50	-	192.168.1.75	-	FsiSqI1WLLlY9GyLV5	application/x-dosexec	malware.exe	-	SuspiciousFiles::Suspicious_File_Type	Suspicious file type detected: malware.exe	-	-	-	-	-	-	Notice::ACTION_LOG	(empty)	3600.000000	-	-	-	-	-" >> notice.log.tmp
-            
-            # Re-add the closing line
-            echo "#close	2025-08-31-14-00-00" >> notice.log.tmp
-            
-            # Replace the original file
-            mv notice.log.tmp notice.log
-        fi
+        # Add the malware detection notice
+        echo "1756652095.140000	-	185.220.101.50	-	192.168.1.75	-	FsiSqI1WLLlY9GyLV5	application/x-dosexec	-	-	MalwareDetection::Known_Malware_Hash	Known malware detected! Hash: 9ce3bb74469869d10b50d343edef600e	-	-	-	-	-	-	Notice::ACTION_LOG	(empty)	3600.000000	-	-	-	-	-" >> notice.log.tmp
+        
+        # Re-add the closing line
+        echo "#close	2025-08-31-14-00-00" >> notice.log.tmp
+        
+        # Replace the original file
+        mv notice.log.tmp notice.log
     fi
-}
-
-# Apply the file notice additions
-add_file_notices
+    
+    if ! grep -q "SuspiciousFiles::Suspicious_File_Type" notice.log 2>/dev/null; then
+        # Remove the closing line temporarily
+        grep -v "^#close" notice.log > notice.log.tmp
+        
+        # Add the suspicious file type notice
+        echo "1756652095.141000	-	185.220.101.50	-	192.168.1.75	-	FsiSqI1WLLlY9GyLV5	application/x-dosexec	malware.exe	-	SuspiciousFiles::Suspicious_File_Type	Suspicious file type detected: malware.exe	-	-	-	-	-	-	Notice::ACTION_LOG	(empty)	3600.000000	-	-	-	-	-" >> notice.log.tmp
+        
+        # Re-add the closing line
+        echo "#close	2025-08-31-14-00-00" >> notice.log.tmp
+        
+        # Replace the original file
+        mv notice.log.tmp notice.log
+    fi
+fi
 
 # Set proper permissions
 chown -R ubuntu:ubuntu /home/ubuntu/zeek_analysis/
+chmod 644 /home/ubuntu/zeek_analysis/*.log 2>/dev/null
+chmod 644 /home/ubuntu/zeek_analysis/*.pcap 2>/dev/null
+chmod 755 /home/ubuntu/zeek_analysis/extract_files/
+
+# Verify the setup
+echo "Lab files setup complete:"
+echo "- files.log created with file transfer entries"
+echo "- notice.log created with malware detection notices"
+echo "- extract_files/ directory prepared with extracted files"
