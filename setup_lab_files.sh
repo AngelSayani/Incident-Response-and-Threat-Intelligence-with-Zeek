@@ -1,16 +1,16 @@
 #!/bin/bash
-# Setup script to ensure all expected files and logs exist for the lab
+# Setup script to ensure expected files and logs exist for the lab
 
-# Create extract_files directory with example extracted files
+# Create extract_files directory with  extracted files
 mkdir -p /home/ubuntu/zeek_analysis/extract_files
 cd /home/ubuntu/zeek_analysis/extract_files
 
-# Create the actual extracted file that matches what Zeek generates
+# Create the actual extracted file 
 echo "MZ" | xxd -r -p > extract-1756653817.607456-HTTP-FsiSqI1WLLlY9GyLV5
 
 cd /home/ubuntu/zeek_analysis
 
-# Create a proper files.log that will always exist
+# Create a proper files.log 
 cat > files.log << 'FILESLOG'
 #separator \x09
 #set_separator	,
@@ -24,7 +24,7 @@ cat > files.log << 'FILESLOG'
 #close	2025-08-31-14-00-00
 FILESLOG
 
-# Ensure proper notice.log with all expected notice types exists
+# Ensure proper notice.log 
 cat > notice.log.full << 'NOTICELOG'
 #separator \x09
 #set_separator	,
