@@ -44,8 +44,8 @@ cat > notice.log.full << 'NOTICELOG'
 1756652095.131507	-	-	-	-	-	-	-	-	-	ProtocolAnomaly::Suspicious_DNS_Query	Possible hex-encoded DNS query detected	-	-	-	-	-	-	Notice::ACTION_LOG	(empty)	3600.000000	-	-	-	-	-
 1756652095.131862	-	192.168.1.100	-	-	-	-	-	-	-	CorrelationRules::Multi_Stage_Attack	Multi-stage attack detected from 192.168.1.100: port_scan exploitation_attempt	-	192.168.1.100	-	-	-	-	Notice::ACTION_LOG	(empty)	3600.000000	-	-	-	-	-
 1756652095.131862	-	185.220.101.50	-	192.168.1.75	-	-	-	-	-	CorrelationRules::C2_Communication_Pattern	Regular beacon pattern detected from 192.168.1.75 to 185.220.101.50	-	192.168.1.75	185.220.101.50	-	-	-	Notice::ACTION_LOG	(empty)	3600.000000	-	-	-	-	-
-1756652095.140000	-	185.220.101.50	-	192.168.1.75	-	FhETkS3I7LsLH4QQBf	application/x-dosexec	malware.exe	-	MalwareDetection::Known_Malware_Hash	Known malware detected! Hash: 5d41402abc4b2a76b9719d911017c592	-	-	-	-	-	-	Notice::ACTION_LOG	(empty)	3600.000000	-	-	-	-	-
-1756652095.141000	-	185.220.101.50	-	192.168.1.75	-	FZW8tX2J8SJH3RTWBa	application/x-msdownload	payload.exe	-	SuspiciousFiles::Suspicious_File_Type	Suspicious file type detected: payload.exe	-	-	-	-	-	-	Notice::ACTION_LOG	(empty)	3600.000000	-	-	-	-	-
+1756652095.140000	-	185.220.101.50	-	192.168.1.75	-	FsiSqI1WLLlY9GyLV5	application/x-dosexec	-	-	MalwareDetection::Known_Malware_Hash	Known malware detected! Hash: 9ce3bb74469869d10b50d343edef600e	-	-	-	-	-	-	Notice::ACTION_LOG	(empty)	3600.000000	-	-	-	-	-
+1756652095.141000	-	185.220.101.50	-	192.168.1.75	-	FsiSqI1WLLlY9GyLV5	application/x-dosexec	malware.exe	-	SuspiciousFiles::Suspicious_File_Type	Suspicious file type detected: malware.exe	-	-	-	-	-	-	Notice::ACTION_LOG	(empty)	3600.000000	-	-	-	-	-
 #close	2025-08-31-14-00-00
 NOTICELOG
 
