@@ -5,6 +5,9 @@
 mkdir -p /home/ubuntu/zeek_analysis/extract_files
 cd /home/ubuntu/zeek_analysis
 
+# Create an extracted file
+echo -n "MZ" > extract-1756653817.607456-HTTP-FsiSqI1WLLlY9GyLV5
+
 # Only create files.log if it doesn't exist
 if [ ! -f files.log ]; then
 cat > files.log << 'FILESLOG'
@@ -26,7 +29,7 @@ if [ -f notice.log ]; then
     cp notice.log notice.log.backup
 fi
 
-# Create a new notice.log with BOTH file-related notices
+# Create a new notice.log with both file-related notices
 cat > notice.log << 'NOTICELOG'
 #separator \x09
 #set_separator	,
