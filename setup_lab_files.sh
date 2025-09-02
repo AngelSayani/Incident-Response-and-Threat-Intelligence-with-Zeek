@@ -4,9 +4,6 @@
 # Create extract_files directory if needed
 mkdir -p /home/ubuntu/zeek_analysis/extract_files
 
-# Create an extracted file
-echo -ne "\x4d\x5a" > /home/ubuntu/zeek_analysis/extract_files/extract-1756653817.607456-HTTP-FsiSqI1WLLlY9GyLV5
-
 # Only create files.log if it doesn't exist
 if [ ! -f files.log ]; then
 cat > files.log << 'FILESLOG'
